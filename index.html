@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Lorenzana</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* Estilos base */
+    body {
+      background: url('fondo.png') no-repeat center center fixed;
+      background-size: cover;
+      font-family: sans-serif;
+      text-align: center;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ChatBox */
+    #chatBox {
+      width: 90%;
+      max-width: 600px;
+      margin: 10px auto;
+      border-radius: 8px;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      text-align: left;
+      transition: background 0.3s;
+    }
+
+    #installBtn {
+      display: none;
+      padding: 10px;
+      margin: 15px auto;
+      background: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    /* Modo claro */
+    @media (prefers-color-scheme: light) {
+      body {
+        color: #111;
+        background-color: #f4f4f4;
+      }
+      #chatBox {
+        background: rgba(255,255,255,0.8);
+        color: #111;
+      }
+      .msg-left {
+        background: #e0e0e0;
+        color: #111;
+      }
+      .msg-right {
+        background: #4caf50;
+        color: white;
+      }
+    }
+
+    /* Modo oscuro */
+    @media (prefers-color-scheme: dark) {
+      body {
+        color: white;
+        background-color: #111;
+      }
+      #chatBox {
+        background: rgba(0,0,0,0.6);
+        color: white;
+      }
+      .msg-left {
+        background: #333;
+        color: #fff;
+      }
+      .msg-right {
+        background: #4caf50;
+        color: #fff;
+      }
+    }
+
+    /* Burbujas */
+    .message {
+      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 15px;
+      margin: 5px;
+      display: inline-block;
+      word-wrap: break-word;
+      position: relative;
+      font-size: 14px;
+    }
+    .message .time {
+      font-size: 0.7em;
+      opacity: 0.7;
+      position: absolute;
+      bottom: -15px;
+      right: 10px;
+    }
+    .msg-left {
+      text-align: left;
+      border-bottom-left-radius: 0;
+      float: left;
+      clear: both;
+    }
+    .msg-right {
+      text-align: left;
+      border-bottom-right-radius: 0;
+      float: right;
+      clear: both;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📻 Radio Lorenzana</h1>
+  <p>Escúchanos en vivo</p>
+  <audio controls autoplay style="margin:20px 0;">
+    <source src="https://stream.zeno.fm/8pn33qbynoxvv" type="audio/mpeg">
+    Tu navegador no soporta audio HTML5.
+  </audio>
+
+  <!-- Botón de instalación PWA -->
+  <button id="installBtn">📲 Instalar App</button>
+
+  <!-- Chat -->
+  <div style="margin-top:200px; padding-bottom:100px;">
+    <h2>💬 Chat en vivo</h2>
+    <div id="chatBox"></div>
+
+    <input type="text" id="username" placeholder="Tu nombre" style="padding:8px; margin:5px; width:30%;">
+    <input type="text" id="message" placeholder="Escribe un mensaje..." style="padding:8px; margin:5px; width:40%;">
+    <button id="emojiBtn" style="padding:8px; background:#ff9800; color:white; border:none; border-radius:5px;">😀</button>
+    <button onclick="sendMessage()" style="padding:8px; background:#4caf50; color:white; border:none; border-radius:5px;">Enviar</button>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Emoji Button -->
+  <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/index.min.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyADm_Tk79VV4faEMzg3kB0xJr2KyKeLrkA",
+      authDomain: "radio-lorenzana-chat.firebaseapp.com",
+      databaseURL: "https://radio-lorenzana-chat-default-rtdb.firebaseio.com/",
+      projectId: "radio-lorenzana-chat",
+      storageBucket: "radio-lorenzana-chat.firebasestorage.app",
+      messagingSenderId: "824125991839",
+      appId: "1:824125991839:web:340d9d3979068d68222baa",
+      measurementId: "G-WK0CC4S85E"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+
+    var chatBox = document.getElementById("chatBox");
+
+    // Escuchar mensajes
+    db.ref("messages").on("child_added", function(snapshot) {
+      var msg = snapshot.val();
+      if (!msg) return;
+
+      var user = document.getElementById("username").value || "Anon";
+
+      var div = document.createElement("div");
+      div.classList.add("message");
+
+      if (msg.user === user) {
+        div.classList.add("msg-right");
+      } else {
+        div.classList.add("msg-left");
+      }
+
+      div.innerHTML = "<b>" + msg.user + ":</b> " + msg.text +
+                      "<div class='time'>" + (msg.time || "") + "</div>";
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // Enviar mensaje con hora
+    function sendMessage() {
+      var user = document.getElementById("username").value || "Anon";
+      var text = document.getElementById("message").value;
+      if (text.trim() !== "") {
+        var now = new Date();
+        var time = now.getHours().toString().padStart(2, "0") + ":" +
+                   now.getMinutes().toString().padStart(2, "0");
+
+        db.ref("messages").push({ 
+          user: user, 
+          text: text, 
+          time: time 
+        });
+        document.getElementById("message").value = "";
+      }
+    }
+
+    // Instalación PWA
+    let deferredPrompt;
+    const installBtn = document.getElementById("installBtn");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = "inline-block";
+    });
+
+    installBtn.addEventListener("click", () => {
+      installBtn.style.display = "none";
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        deferredPrompt = null;
+      });
+    });
+
+    // Emoji Picker
+    const picker = new EmojiButton();
+    const emojiBtn = document.querySelector('#emojiBtn');
+    const messageInput = document.querySelector('#message');
+
+    emojiBtn.addEventListener('click', () => {
+      picker.togglePicker(emojiBtn);
+    });
+
+    picker.on('emoji', emoji => {
+      messageInput.value += emoji;
+      messageInput.focus();
+    });
+  </script>
+
+</body>
+</html>

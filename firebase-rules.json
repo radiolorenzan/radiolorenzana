@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "messages": {
+      ".read": true,
+      ".write": "(!data.exists() && newData.exists())",
+      "$msgid": {
+        ".validate": "
+          newData.hasChildren(['user','text','time']) &&
+          newData.child('user').isString() &&
+          newData.child('text').isString() &&
+          newData.child('text').val().length <= 200 &&
+          newData.child('time').isString() &&
+          newData.child('time').val().matches(/^\\d{2}:\\d{2}$/)
+        "
+      }
+    }
+  }
+}
